@@ -1,4 +1,6 @@
 import asyncio
+from operator import index
+
 import requests
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
@@ -8,13 +10,11 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils import *
 import requests
 import logging
-import pandas
+import pandas as pd
 
 # message.from_user.id
 
-users = {
-
-}
+users = pd.DataFrame(columns=['login', 'password'])
 
 logging.basicConfig(level=logging.INFO)
 
@@ -28,32 +28,39 @@ headers_login = {'Content-Type': 'application/json'}
 # token = requests.post(url_login, headers=headers_login, json=json_login).json()['token']
 
 @dp.message(Command('start'))
-async def echo(message: Message):
-    # kb = [[types.KeyboardButton(text="Авторизироваться")]]
-    # keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+async def StartLogin(message: Message):
     await message.answer('Привет! Для продолжения работы нужно авторизоваться')
     await message.answer('Для авторизации напишите /login (логин) (пароль)')
 
+    if message.from_user.id not in users.index:
+        @dp.message(Command('login'))
+        async def asd(message: Message):
+            log = message.text[6:].split()
 
-@dp.message(Command('login'))
-async def asd(message: Message):
-    log = message.text[6:].split()
+            json_login = {
+                "login": log[0],
+                "password": log[1],
+                "fingerprint": {}
+            }
 
-    json_login = {
-        "login": log[0],
-        "password": log[1],
-        "fingerprint": {}
-    }
+            ans = requests.post(url_login, headers=headers_login, json=json_login).json()
 
-    ans = requests.post(url_login, headers=headers_login, json=json_login).json()
+            try:
+                await message.answer(f'Вы успешно авторизовались!')
+                print(users)
+                if str(message.from_user.id) not in users.index:
+                    users.loc[str(message.from_user.id)] = log
+                    users.to_csv('log.csv', index=False)
+                    print(users)
 
-    try:
-        tmp = ans['token']
-        await message.answer(f'Вы успешно авторизовались! {log[0]} {log[1]}')
-        if str(message.from_user.id) not in users:
-            users[str(message.from_user.id)] = log
-    except:
-        await message.answer(ans['detail'])
+            except:
+                await message.answer(ans['detail'])
+    else:
+        @dp.message(Command('VCS'))
+        async def VCS(message: Message)):
+
+
+
 
 async def main():
     await dp.start_polling(bot)

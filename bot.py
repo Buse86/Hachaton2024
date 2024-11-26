@@ -36,7 +36,7 @@ async def StartLogin(message: Message):
             @dp.message(Command('login'))
             async def asd(message: Message):
                 log = message.text[6:].split()
-
+        # ,
                 json_login = {
                     "login": log[0],
                     "password": log[1],

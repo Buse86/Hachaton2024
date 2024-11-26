@@ -7,45 +7,53 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils import *
 import requests
+import logging
+import pandas
+
+# message.from_user.id
 
 users = {
-    'id2': ['login', 'password'],
+
 }
 
-bot = Bot(token='6908813524:AAEwHxUdwjGZO_q_eb9UZszRkVxjZXU4k8k')
+logging.basicConfig(level=logging.INFO)
+
+bot = Bot(token='7897974325:AAE-G0xfOiwGaoNB-5mLoaCsd9pI-dHFrPo')
 dp = Dispatcher()
 
 url_login = 'https://test.vcc.uriit.ru/api/auth/login'
-
-json_login = {
-  "login": "hantaton082",
-  "password": "apyNbPS5Wr8^PbCg",
-  "fingerprint": {}
-}
 
 headers_login = {'Content-Type': 'application/json'}
 
 # token = requests.post(url_login, headers=headers_login, json=json_login).json()['token']
 
-@dp.message(CommandStart())
+@dp.message(Command('start'))
 async def echo(message: Message):
-    await message.answer('Приветствую!')
-    await message.answer('Как тебя зовут?')
+    # kb = [[types.KeyboardButton(text="Авторизироваться")]]
+    # keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+    await message.answer('Привет! Для продолжения работы нужно авторизоваться')
+    await message.answer('Для авторизации напишите /login (логин) (пароль)')
 
-@dp.message(F.text)
+
+@dp.message(Command('login'))
 async def asd(message: Message):
-    qwezxc = requests.post(url_login, headers=headers_login, json=json_login).json()
-    kb = [[types.KeyboardButton(text="Авторизироваться")],
-    ]
+    log = message.text[6:].split()
 
-    keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
-    #await message.answer("Приветствую!", reply_markup=keyboard)
+    json_login = {
+        "login": log[0],
+        "password": log[1],
+        "fingerprint": {}
+    }
+
+    ans = requests.post(url_login, headers=headers_login, json=json_login).json()
 
     try:
-        qwe666 = qwezxc['token']
-        await message.answer(qwe666)
+        tmp = ans['token']
+        await message.answer(f'Вы успешно авторизовались! {log[0]} {log[1]}')
+        if str(message.from_user.id) not in users:
+            users[str(message.from_user.id)] = log
     except:
-        await message.answer('ты красотка')
+        await message.answer(ans['detail'])
 
 async def main():
     await dp.start_polling(bot)

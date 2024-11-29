@@ -2,7 +2,6 @@ import asyncio
 from operator import index
 from pyexpat.errors import messages
 
-
 import requests
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
@@ -72,7 +71,7 @@ async def asd(message: Message):
 @dp.message(Command('vcs'))
 async def VCSInfo(message: Message):
     if np.int64(message.from_user.id) in users['id'].values:
-        # await message.answer('Введите даты начала и окончания ВКС через пробел, в формате: ГГГГ-ММ-ДД')
+        await message.answer('Введите даты начала и окончания ВКС через пробел, в формате: ГГГГ-ММ-ДД')
         try:
             data = str(message.text)[5:].split()
 
@@ -116,7 +115,12 @@ async def VCSInfo(message: Message):
             }
             print(vcs_ans)
             for i in vcs_ans:
-                await message.answer(i['name'])
+                # org = requests.get('https://test.vcc.uriit.ru/api/catalogs/departments/' + i['organizedBy'], headers=headers, params={'department_id': i['organizedBy']}).json()['name']
+                await message.answer(f'''Название: {i['name']}
+Дата начала: {i['startedAt']}
+Дата окончания: {i['endedAt']}
+Продолжительность: {i['duration']} минут
+''')
 
         except:
             await message.answer('Вы ввели некорректную дату')
@@ -126,6 +130,43 @@ async def VCSInfo(message: Message):
 #     await message.answer('1')
 #     response = await
 #     await message.answer(response)
+@dp.message(Command('create'))
+async def CreateVcs(message: Message):
+    vcs_info = {}
+
+    await message.answer('Чтобы создать новую ВКС, введите её название:')
+    response = await dp.wait_for_message(chat_id=message.chat.id)
+    vcs_info['Название'] = response.text
+
+    await message.answer('Выберите место проведения:')
+    response = await dp.wait_for_message(chat_id=message.chat.id)
+    vcs_info['Место'] = response.text
+
+    await message.answer('Выберите помещение:')
+    response = await dp.wait_for_message(chat_id=message.chat.id)
+    vcs_info['Помещение'] = response.text
+
+    await message.answer('Введите дату и время начала ВКС (в формате ГГГГ-ММ-ДД ЧЧ:ММ:СС):')
+    response = await dp.wait_for_message(chat_id=message.chat.id)
+    vcs_info['Дата и время начала'] = response.text
+
+    await message.answer('Введите продолжительность ВКС (в формате ЧЧ:ММ:СС):')
+    response = await dp.wait_for_message(chat_id=message.chat.id)
+    vcs_info['Продолжительность'] = response.text
+
+    await message.answer('Введите участников ВКС, в формате e-mail:')
+    response = await dp.wait_for_message(chat_id=message.chat.id)
+    vcs_info['Участники'] = response.text
+
+    await message.answer('Введите максимальное количество участников ВКС:')
+    response = await dp.wait_for_message(chat_id=message.chat.id)
+    vcs_info['Максимальное количество участников'] = response.text
+
+    await message.answer('Введите средство проведения ВКС:')
+    response = await dp.wait_for_message(chat_id=message.chat.id)
+    vcs_info['Средство проведения'] = response.text
+
+    await message.answer(f"Вот информация о вашей ВКС:\n{vcs_info}")
 
 async def main():
     await dp.start_polling(bot)

@@ -17,7 +17,7 @@ import numpy as np
 # message.from_user.id
 
 users = pd.read_csv('log.csv')
-# users = pd.DataFrame(columns=['id', 'login', 'password'])
+# users = pd.DataFrame(columns=['id', 'login', 'password', 'create', 'VCScreate', 'filter'])
 
 url_vcs = 'https://test.vcc.uriit.ru/api/meetings'
 url_login = 'https://test.vcc.uriit.ru/api/auth/login'
@@ -33,6 +33,7 @@ headers_login = {'Content-Type': 'application/json'}
 # token = requests.post(url_login, headers=headers_login, json=json_login).json()['token']
 # @dp.message_handler(commands=['start'])
 # async def cmd_start(message: types.Message):
+
 @dp.message(Command('start'))
 async def StartLogin(message: Message):
     await message.answer('Привет! Для продолжения работы нужно авторизоваться')
@@ -48,7 +49,8 @@ async def asd(message: Message):
             "password": log1[1],
             "fingerprint": {}
         }
-        log = {'id': str(message.from_user.id), 'login': log1[0], 'password': log1[1]}
+
+        log = {'id': str(message.from_user.id), 'login': log1[0], 'password': log1[1], 'create': 0, 'VCScreate': '', 'filter': ''}
 
         ans = requests.post(url_login, headers=headers_login, json=json_login).json()
 
@@ -94,7 +96,6 @@ async def VCSInfo(message: Message):
                 'Content-Type': 'application/json',
             }
 
-
             vcs_ans = []
             info_vcs = ['name', 'startedAt', 'endedAt', 'duration', 'organizedBy']
             for i in ['started', 'ended', 'booked', 'cancelled']:
@@ -130,43 +131,124 @@ async def VCSInfo(message: Message):
 #     await message.answer('1')
 #     response = await
 #     await message.answer(response)
+
+
+    # await message.answer('Чтобы создать новую ВКС, введите её название:')
+    # response = await dp.wait_for_message(chat_id=message.chat.id)
+    # vcs_info['Название'] = response.text
+    #
+    # await message.answer('Выберите место проведения:')
+    # response = await dp.wait_for_message(chat_id=message.chat.id)
+    # vcs_info['Место'] = response.text
+    #
+    # await message.answer('Выберите помещение:')
+    # response = await dp.wait_for_message(chat_id=message.chat.id)
+    # vcs_info['Помещение'] = response.text
+    #
+    # await message.answer('Введите дату и время начала ВКС (в формате ГГГГ-ММ-ДД ЧЧ:ММ:СС):')
+    # response = await dp.wait_for_message(chat_id=message.chat.id)
+    # vcs_info['Дата и время начала'] = response.text
+    #
+    # await message.answer('Введите продолжительность ВКС (в формате ЧЧ:ММ:СС):')
+    # response = await dp.wait_for_message(chat_id=message.chat.id)
+    # vcs_info['Продолжительность'] = response.text
+    #
+    # await message.answer('Введите участников ВКС, в формате e-mail:')
+    # response = await dp.wait_for_message(chat_id=message.chat.id)
+    # vcs_info['Участники'] = response.text
+    #
+    # await message.answer('Введите максимальное количество участников ВКС:')
+    # response = await dp.wait_for_message(chat_id=message.chat.id)
+    # vcs_info['Максимальное количество участников'] = response.text
+    #
+    # await message.answer('Введите средство проведения ВКС:')
+    # response = await dp.wait_for_message(chat_id=message.chat.id)
+    # vcs_info['Средство проведения'] = response.text
+
 @dp.message(Command('create'))
 async def CreateVcs(message: Message):
-    vcs_info = {}
+    users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 1
+    await message.answer('Чтобы создать новую ВКС, введите название ВКС')
 
-    await message.answer('Чтобы создать новую ВКС, введите её название:')
-    response = await dp.wait_for_message(chat_id=message.chat.id)
-    vcs_info['Название'] = response.text
+@dp.message(Command('/cancel'))
+async def CanсelVcs(message: Message):
+    users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 0
+    await message.answer('Cоздание ВКС отменено')
 
-    await message.answer('Выберите место проведения:')
-    response = await dp.wait_for_message(chat_id=message.chat.id)
-    vcs_info['Место'] = response.text
+@dp.message()
+async def CreateVcs1(message: Message):
+    if users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] == 1:
+        users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 2
+        response = message.text
+        users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] += ';' + response
+        users.to_csv('log.csv', index=False)
+        await message.answer('Введите максимальное кол-во участников конференции')
 
-    await message.answer('Выберите помещение:')
-    response = await dp.wait_for_message(chat_id=message.chat.id)
-    vcs_info['Помещение'] = response.text
+    elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] == 2:
+        users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 3
 
-    await message.answer('Введите дату и время начала ВКС (в формате ГГГГ-ММ-ДД ЧЧ:ММ:СС):')
-    response = await dp.wait_for_message(chat_id=message.chat.id)
-    vcs_info['Дата и время начала'] = response.text
+        response = message.text
+        response[10] = ''
+        response += 'T00:00:00.000000'
+        users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] += ';' + response
+        users.to_csv('log.csv', index=False)
+        await message.answer('Введите время начала конференции (гггг-мм-дд чч:мм)')
 
-    await message.answer('Введите продолжительность ВКС (в формате ЧЧ:ММ:СС):')
-    response = await dp.wait_for_message(chat_id=message.chat.id)
-    vcs_info['Продолжительность'] = response.text
+    elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] == 3:
+        users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 4
 
-    await message.answer('Введите участников ВКС, в формате e-mail:')
-    response = await dp.wait_for_message(chat_id=message.chat.id)
-    vcs_info['Участники'] = response.text
+        response = message.text
+        users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] += ';' + response
+        users.to_csv('log.csv', index=False)
+        await message.answer('Введите продалжительность конференции в минутах')
 
-    await message.answer('Введите максимальное количество участников ВКС:')
-    response = await dp.wait_for_message(chat_id=message.chat.id)
-    vcs_info['Максимальное количество участников'] = response.text
+    elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] == 4:
+        users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 5
+        response = message.text
+        users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] += ';' + response
+        users.to_csv('log.csv', index=False)
+        await message.answer('''Введите ( . ) ( . )
+           .!.''')
 
-    await message.answer('Введите средство проведения ВКС:')
-    response = await dp.wait_for_message(chat_id=message.chat.id)
-    vcs_info['Средство проведения'] = response.text
+    elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] == 5:
+        users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 0
+        data = users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCSсreate'].split(';')
 
-    await message.answer(f"Вот информация о вашей ВКС:\n{vcs_info}")
+        jsonlogin = {
+            "login": str(users.loc[users['id'].values.tolist().index(message.from_user.id), 'login']),
+            "password": str(users.loc[users['id'].values.tolist().index(message.from_user.id), 'password']),
+            "fingerprint": {}
+        }
+
+        token = requests.post(url_login, headers=headers_login, json=jsonlogin).json()['token']
+
+        headers = {
+            'Authorization': 'Bearer ' + str(token),
+            'Content-Type': 'application/json',
+        }
+
+        cre = {
+            "name": data[0],
+            "ciscoSettings": {
+                "isMicrophoneOn": True,
+                "isVideoOn": True,
+                "isWaitingRoomEnabled": True
+            },
+            "participantsCount": data[1],
+            "startedAt": data[2],
+            "duration": data[3],
+            "participants": [],
+            "sendNotificationsAt": "2024-11-30T11:45:00",
+            "state": "booked"
+        }
+
+        v = requests.post(url_vcs, headers=headers, json=cre)
+        users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 0
+
+        await message.answer(v)
+
+
+
 
 async def main():
     await dp.start_polling(bot)

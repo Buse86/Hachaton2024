@@ -227,7 +227,7 @@ async def CreateVcs1(message: Message):
             await message.answer('Недостаточно данных для создания события.')
             return
 
-        print("New data array (zxc):", zxc)
+        # print("New data array (zxc):", zxc)
 
         jsonlogin = {
             "login": str(users.loc[users['id'].values.tolist().index(message.from_user.id), 'login']),
@@ -240,10 +240,10 @@ async def CreateVcs1(message: Message):
             response.raise_for_status()
             token = response.json().get('token')
             if not token:
-                print("Token not found in response")
+                # print("Token not found in response")
                 return
         except requests.exceptions.RequestException as e:
-            print(f"Error during login request: {e}")
+            # print(f"Error during login request: {e}")
             return
 
         headers = {

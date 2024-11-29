@@ -74,7 +74,7 @@ async def asd(message: Message):
 @dp.message(Command('vcs'))
 async def VCSInfo(message: Message):
     if np.int64(message.from_user.id) in users['id'].values:
-        await message.answer('Введите даты начала и окончания ВКС через пробел, в формате: ГГГГ-ММ-ДД')
+        # await message.answer('Введите даты начала и окончания ВКС через пробел, в формате: ГГГГ-ММ-ДД')
         try:
             data = str(message.text)[5:].split()
 
@@ -107,7 +107,7 @@ async def VCSInfo(message: Message):
                 }
                 vcs = requests.get(url_vcs, headers=headers, params=params_vcs)
                 vcs_ans += vcs.json()['data']
-                print(vcs.json()['data'])
+                # print(vcs.json()['data'])
             nm = {
                 'name': 'Название:',
                 "startedAt": 'Начало: ',
@@ -115,56 +115,16 @@ async def VCSInfo(message: Message):
                 'duration': 'Продолжительность',
                 'organizedBy': 'Организованно'
             }
-            print(vcs_ans)
+            # print(vcs_ans)
             for i in vcs_ans:
-                # org = requests.get('https://test.vcc.uriit.ru/api/catalogs/departments/' + i['organizedBy'], headers=headers, params={'department_id': i['organizedBy']}).json()['name']
-                await message.answer(f'''Название: {i['name']}
-Дата начала: {i['startedAt']}
-Дата окончания: {i['endedAt']}
-Продолжительность: {i['duration']} минут
-''')
+                try:
+                    org = requests.get('https://test.vcc.uriit.ru/api/catalogs/departments/' + i['organizedBy'], headers=headers, params={'department_id': i['organizedBy']}).json()['name']
+                    await message.answer(f'Название: {i['name']}\nДата начала: {i['startedAt'][:10]} {i['startedAt'][11:-3]}\nДата окончания: {i['endedAt'][:10]} {i['endedAt'][11:-3]}\nПродолжительность: {i['duration']} минут\nОрганизованно: {org}')
+                except:
+                    await message.answer(f'Название: {i['name']}\nДата начала: {i['startedAt'][:10]} {i['startedAt'][11:-3]}\nДата окончания: {i['endedAt'][:10]} {i['endedAt'][11:-3]}\nПродолжительность: {i['duration']} минут')
 
         except:
             await message.answer('Вы ввели некорректную дату')
-
-# @dp.message(Command('filter'))
-# async def filter(message: Message):
-#     await message.answer('1')
-#     response = await
-#     await message.answer(response)
-
-
-    # await message.answer('Чтобы создать новую ВКС, введите её название:')
-    # response = await dp.wait_for_message(chat_id=message.chat.id)
-    # vcs_info['Название'] = response.text
-    #
-    # await message.answer('Выберите место проведения:')
-    # response = await dp.wait_for_message(chat_id=message.chat.id)
-    # vcs_info['Место'] = response.text
-    #
-    # await message.answer('Выберите помещение:')
-    # response = await dp.wait_for_message(chat_id=message.chat.id)
-    # vcs_info['Помещение'] = response.text
-    #
-    # await message.answer('Введите дату и время начала ВКС (в формате ГГГГ-ММ-ДД ЧЧ:ММ:СС):')
-    # response = await dp.wait_for_message(chat_id=message.chat.id)
-    # vcs_info['Дата и время начала'] = response.text
-    #
-    # await message.answer('Введите продолжительность ВКС (в формате ЧЧ:ММ:СС):')
-    # response = await dp.wait_for_message(chat_id=message.chat.id)
-    # vcs_info['Продолжительность'] = response.text
-    #
-    # await message.answer('Введите участников ВКС, в формате e-mail:')
-    # response = await dp.wait_for_message(chat_id=message.chat.id)
-    # vcs_info['Участники'] = response.text
-    #
-    # await message.answer('Введите максимальное количество участников ВКС:')
-    # response = await dp.wait_for_message(chat_id=message.chat.id)
-    # vcs_info['Максимальное количество участников'] = response.text
-    #
-    # await message.answer('Введите средство проведения ВКС:')
-    # response = await dp.wait_for_message(chat_id=message.chat.id)
-    # vcs_info['Средство проведения'] = response.text
 
 @dp.message(Command('create'))
 async def CreateVcs(message: Message):
@@ -270,7 +230,10 @@ async def CreateVcs1(message: Message):
             "duration": zxc[3],
             "participants": [],
             "sendNotificationsAt": send_notifications_at_str,
-            "state": "booked"
+            "state": "booked",
+            "organizedBy":{
+                'id': requests.post(url_login, headers=headers_login, json=jsonlogin).json()['user']['id']
+            }
         }
 
         #print("Request data:", json.dumps(cre, indent=4))
@@ -279,14 +242,9 @@ async def CreateVcs1(message: Message):
             v = requests.post(url_vcs, headers=headers, json=cre)
             v.raise_for_status()
 
-            if v.status_code == 201:
-                await message.answer(f'ВКС успешно создана \nСсылка для подключения {v.json()['permalink']}')
-            else:
-                print(f"{v.status_code} Error")
-                print(v.json())
+            await message.answer(f'ВКС успешно создана \nСсылка для подключения {v.json()['permalink']}')
 
         except requests.exceptions.RequestException as e:
-            print(f"Error during creating event request: {e}")
             await message.answer("Произошла ошибка при создании ВКС, попробуйте заново.")
 
 

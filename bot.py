@@ -170,9 +170,10 @@ async def CreateVcs(message: Message):
     users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 1
     await message.answer('Чтобы создать новую ВКС, введите название ВКС')
 
-@dp.message(Command('/cancel'))
+@dp.message(Command('cancel'))
 async def CanсelVcs(message: Message):
     users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 0
+    users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] = ''
     await message.answer('Cоздание ВКС отменено')
 
 @dp.message()
@@ -180,19 +181,20 @@ async def CreateVcs1(message: Message):
     if users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] == 1:
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 2
         response = message.text
-        users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] += ';' + response
+        users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] = response
         users.to_csv('log.csv', index=False)
-        await message.answer('Введите максимальное кол-во участников конференции')
+        await message.answer('Введите время начала конференции (гггг-мм-дд чч:мм)')
 
     elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] == 2:
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 3
 
         response = message.text
-        response[10] = ''
-        response += 'T00:00:00.000000'
-        users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] += ';' + response
+        tmp = response.split()[1]
+        response = response.replace(' ', f'T{tmp}:00.000000')[:-5]
+
+        users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] = users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] + ';' + str(response)
         users.to_csv('log.csv', index=False)
-        await message.answer('Введите время начала конференции (гггг-мм-дд чч:мм)')
+        await message.answer('Введите максимальное кол-во участников конференции')
 
     elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] == 3:
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 4
@@ -200,7 +202,7 @@ async def CreateVcs1(message: Message):
         response = message.text
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] += ';' + response
         users.to_csv('log.csv', index=False)
-        await message.answer('Введите продалжительность конференции в минутах')
+        await message.answer('Введите продoлжительность конференции в минутах')
 
     elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] == 4:
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 5
@@ -212,8 +214,10 @@ async def CreateVcs1(message: Message):
 
     elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] == 5:
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 0
-        data = users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCSсreate'].split(';')
-
+        data = users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'].split(';')
+        data[2] = int(data[2])
+        data[3] = int(data[3])
+        print(data)
         jsonlogin = {
             "login": str(users.loc[users['id'].values.tolist().index(message.from_user.id), 'login']),
             "password": str(users.loc[users['id'].values.tolist().index(message.from_user.id), 'password']),
@@ -245,7 +249,7 @@ async def CreateVcs1(message: Message):
         v = requests.post(url_vcs, headers=headers, json=cre)
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 0
 
-        await message.answer(v)
+        await message.answer(v.text)
 
 
 

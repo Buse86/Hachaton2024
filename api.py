@@ -1,6 +1,9 @@
 import requests
+
 url_vcs = 'https://test.vcc.uriit.ru/api/meetings'
 url_login = 'https://test.vcc.uriit.ru/api/auth/login'
+
+
 jsonlogin = {
     "login": 'hantaton08',
     "password": 'apyNbPS5Wr8^PbCg',
@@ -20,7 +23,26 @@ params_vcs = {
     'state': 'started'
 }
 vcs = requests.get('https://test.vcc.uriit.ru/api/meetings', headers=headers, params=params_vcs)
-print(vcs)
+
+cre = {
+    "name": "228",
+    "ciscoSettings": {
+        "isMicrophoneOn": True,
+        "isVideoOn": True,
+        "isWaitingRoomEnabled": True
+    },
+    "participantsCount": 5,
+    "startedAt": "2025-01-08T12:00:00",
+    "duration": 120,
+    "participants": [],
+    "sendNotificationsAt": "2024-11-30T11:45:00",
+    "state": "booked"
+}
+
+v = requests.post(url_vcs, headers=headers, json=cre)
+
+print(v)
+
 # for i in vcs.json()['data']:
 #     print(i['name'])
 #

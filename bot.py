@@ -1,7 +1,7 @@
 import asyncio
 from operator import index
 from pyexpat.errors import messages
-
+from datetime import datetime, timedelta
 import requests
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
@@ -13,6 +13,7 @@ import requests
 import logging
 import pandas as pd
 import numpy as np
+import json
 
 # message.from_user.id
 
@@ -209,47 +210,84 @@ async def CreateVcs1(message: Message):
         response = message.text
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] += ';' + response
         users.to_csv('log.csv', index=False)
-        await message.answer('''Введите ( . ) ( . )
-           .!.''')
+        await message.answer('''Отправтье любое сообщение для подтверждения создания ВКС''')
 
     elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] == 5:
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 0
-        data = users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'].split(';')
-        data[2] = int(data[2])
-        data[3] = int(data[3])
-        print(data)
+        zxc = users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'].split(';')
+
+        if len(zxc) >= 4:
+            try:
+                zxc[2] = int(zxc[2])
+                zxc[3] = int(zxc[3])
+            except ValueError:
+                await message.answer('Ошибка при преобразовании данных. Убедитесь, что время и продолжительность указаны верно.')
+                return
+        else:
+            await message.answer('Недостаточно данных для создания события.')
+            return
+
+        print("New data array (zxc):", zxc)
+
         jsonlogin = {
             "login": str(users.loc[users['id'].values.tolist().index(message.from_user.id), 'login']),
             "password": str(users.loc[users['id'].values.tolist().index(message.from_user.id), 'password']),
             "fingerprint": {}
         }
 
-        token = requests.post(url_login, headers=headers_login, json=jsonlogin).json()['token']
+        try:
+            response = requests.post(url_login, headers=headers_login, json=jsonlogin)
+            response.raise_for_status()
+            token = response.json().get('token')
+            if not token:
+                print("Token not found in response")
+                return
+        except requests.exceptions.RequestException as e:
+            print(f"Error during login request: {e}")
+            return
 
         headers = {
             'Authorization': 'Bearer ' + str(token),
             'Content-Type': 'application/json',
         }
 
+        started_at_str = zxc[1]
+        started_at = datetime.strptime(started_at_str, "%Y-%m-%dT%H:%M:%S.%f")
+        send_notifications_at = started_at - timedelta(hours=1)
+        send_notifications_at_str = send_notifications_at.strftime("%Y-%m-%dT%H:%M:%S")
+
+        participants_count = int(zxc[2])
+
         cre = {
-            "name": data[0],
+            "name": zxc[0],
             "ciscoSettings": {
                 "isMicrophoneOn": True,
                 "isVideoOn": True,
                 "isWaitingRoomEnabled": True
             },
-            "participantsCount": data[1],
-            "startedAt": data[2],
-            "duration": data[3],
+            "participantsCount": participants_count,
+            "startedAt": zxc[1],
+            "duration": zxc[3],
             "participants": [],
-            "sendNotificationsAt": "2024-11-30T11:45:00",
+            "sendNotificationsAt": send_notifications_at_str,
             "state": "booked"
         }
 
-        v = requests.post(url_vcs, headers=headers, json=cre)
-        users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 0
+        #print("Request data:", json.dumps(cre, indent=4))
 
-        await message.answer(v.text)
+        try:
+            v = requests.post(url_vcs, headers=headers, json=cre)
+            v.raise_for_status()
+
+            if v.status_code == 201:
+                await message.answer(f'ВКС успешно создана \nСсылка для подключения {v.json()['permalink']}')
+            else:
+                print(f"{v.status_code} Error")
+                print(v.json())
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error during creating event request: {e}")
+            await message.answer("Произошла ошибка при создании ВКС, попробуйте заново.")
 
 
 

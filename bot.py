@@ -2,6 +2,7 @@ import asyncio
 from operator import index
 from pyexpat.errors import messages
 from datetime import datetime, timedelta
+
 import requests
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
@@ -14,11 +15,6 @@ import logging
 import pandas as pd
 import numpy as np
 import json
-
-# message.from_user.id
-
-users = pd.read_csv('log.csv')
-# users = pd.DataFrame(columns=['id', 'login', 'password', 'create', 'VCScreate', 'filter'])
 
 url_vcs = 'https://test.vcc.uriit.ru/api/meetings'
 url_login = 'https://test.vcc.uriit.ru/api/auth/login'
@@ -37,11 +33,19 @@ async def StartLogin(message: Message):
     await message.answer('Для просмотра списка команд введите /help')
 
 @dp.message(Command('help'))
-async def StartLogin(message: Message):
+async def help(message: Message):
+    users = pd.read_csv('log.csv')
     if np.int64(message.from_user.id) not in users['id'].values:
         await message.answer('Для того чтобы пользоватся ботом, вам нужно авторизоватся \nВведите /login логин пароль')
     else:
         await message.answer('/vcs - Просмотр всех вкс по заданным фильтрам\n/myvcs - Просмотр всех ВКС, в котором вы явдяетесь участником\n/create - Создание вкс')
+
+@dp.message(Command('unlogin'))
+async def unLogin(message: Message):
+    users = pd.read_csv('log.csv')
+    users.drop(users['id'].values.tolist().index(message.from_user.id), inplace=True)
+    users.to_csv('log.csv', index=False)
+    await message.answer('Вы вышли из свои учетной записи')
 
 
 @dp.message(Command('login'))
@@ -71,6 +75,7 @@ async def asd(message: Message):
 
         except:
             await message.answer(ans['detail'] + '\nПопробуйте снова')
+        users = pd.read_csv('log.csv')
     else:
         await message.answer('Вы авторизованы')
 
@@ -79,7 +84,8 @@ async def asd(message: Message):
 async def VCSInfo(message: Message):
     users = pd.read_csv('log.csv')
     if np.int64(message.from_user.id) in users['id'].values:
-        # await message.answer('Введите даты начала и окончания ВКС через пробел, в формате: ГГГГ-ММ-ДД')
+        await message.answer('Введите даты начала и окончания ВКС через пробел, в формате: ГГГГ-ММ-ДД')
+
         try:
             data = str(message.text)[5:].split()
 
@@ -89,13 +95,7 @@ async def VCSInfo(message: Message):
                 "fingerprint": {}
             }
 
-
-            # print(jsonlogin['login'], jsonlogin['password'])
-
             token = requests.post(url_login, headers=headers_login, json=jsonlogin).json()['token']
-
-            # print(token)
-
 
             headers = {
                 'Authorization': 'Bearer ' + str(token),
@@ -112,7 +112,7 @@ async def VCSInfo(message: Message):
                 }
                 vcs = requests.get(url_vcs, headers=headers, params=params_vcs)
                 vcs_ans += vcs.json()['data']
-                # print(vcs.json()['data'])
+
             nm = {
                 'name': 'Название:',
                 "startedAt": 'Начало: ',
@@ -120,13 +120,15 @@ async def VCSInfo(message: Message):
                 'duration': 'Продолжительность',
                 'organizedBy': 'Организованно'
             }
-            # print(vcs_ans)
-            for i in vcs_ans:
-                try:
-                    org = requests.get('https://test.vcc.uriit.ru/api/catalogs/departments/' + i['organizedBy'], headers=headers, params={'department_id': i['organizedBy']}).json()['name']
-                    await message.answer(f'Название: {i['name']}\nДата начала: {i['startedAt'][:10]} {i['startedAt'][11:-3]}\nДата окончания: {i['endedAt'][:10]} {i['endedAt'][11:-3]}\nПродолжительность: {i['duration']} минут\nОрганизованно: {org}')
-                except:
-                    await message.answer(f'Название: {i['name']}\nДата начала: {i['startedAt'][:10]} {i['startedAt'][11:-3]}\nДата окончания: {i['endedAt'][:10]} {i['endedAt'][11:-3]}\nПродолжительность: {i['duration']} минут')
+            if len(vcs_ans) > 0:
+                for i in vcs_ans:
+                    try:
+                        org = requests.get('https://test.vcc.uriit.ru/api/catalogs/departments/' + i['organizedBy'], headers=headers, params={'department_id': i['organizedBy']}).json()['name']
+                        await message.answer(f'Название: {i['name']}\nДата начала: {i['startedAt'][:10]} {i['startedAt'][11:-3]}\nДата окончания: {i['endedAt'][:10]} {i['endedAt'][11:-3]}\nПродолжительность: {i['duration']} минут\nОрганизованно: {org}')
+                    except:
+                        await message.answer(f'Название: {i['name']}\nДата начала: {i['startedAt'][:10]} {i['startedAt'][11:-3]}\nДата окончания: {i['endedAt'][:10]} {i['endedAt'][11:-3]}\nПродолжительность: {i['duration']} минут')
+            else:
+                await message.answer('В этот период нет ВКС')
 
         except:
             await message.answer('Вы ввели некорректную дату')
@@ -136,6 +138,7 @@ async def myVCSInfo(message: Message):
     users = pd.read_csv('log.csv')
 
     if np.int64(message.from_user.id) in users['id'].values:
+        users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] = 10
         # await message.answer('Введите даты начала и окончания ВКС через пробел, в формате: ГГГГ-ММ-ДД')
         try:
             data = str(message.text)[7:].split()
@@ -146,13 +149,7 @@ async def myVCSInfo(message: Message):
                 "fingerprint": {}
             }
 
-
-            # print(jsonlogin['login'], jsonlogin['password'])
-
             token = requests.post(url_login, headers=headers_login, json=jsonlogin).json()['token']
-
-            # print(token)
-
 
             headers = {
                 'Authorization': 'Bearer ' + str(token),
@@ -171,20 +168,16 @@ async def myVCSInfo(message: Message):
                 }
                 vcs = requests.get(url_vcs, headers=headers, params=params_vcs)
                 vcs_ans += vcs.json()['data']
-            nm = {
-                'name': 'Название:',
-                "startedAt": 'Начало: ',
-                'endedAt': 'Конец',
-                'duration': 'Продолжительность',
-                'organizedBy': 'Организованно'
-            }
-            for i in vcs_ans:
-                try:
-                    org = requests.get('https://test.vcc.uriit.ru/api/catalogs/departments/' + i['organizedBy'], headers=headers, params={'department_id': i['organizedBy']}).json()['name']
-                    await message.answer(f'Название: {i['name']}\nДата начала: {i['startedAt'][:10]} {i['startedAt'][11:-3]}\nДата окончания: {i['endedAt'][:10]} {i['endedAt'][11:-3]}\nПродолжительность: {i['duration']} минут\nОрганизованно: {org}')
-                except:
-                    await message.answer(f'Название: {i['name']}\nДата начала: {i['startedAt'][:10]} {i['startedAt'][11:-3]}\nДата окончания: {i['endedAt'][:10]} {i['endedAt'][11:-3]}\nПродолжительность: {i['duration']} минут')
 
+            if len(vcs_ans) > 0:
+                for i in vcs_ans:
+                    try:
+                        org = requests.get('https://test.vcc.uriit.ru/api/catalogs/departments/' + i['organizedBy'], headers=headers, params={'department_id': i['organizedBy']}).json()['name']
+                        await message.answer(f'Название: {i['name']}\nДата начала: {i['startedAt'][:10]} {i['startedAt'][11:-3]}\nДата окончания: {i['endedAt'][:10]} {i['endedAt'][11:-3]}\nПродолжительность: {i['duration']} минут\nОрганизованно: {org}')
+                    except:
+                        await message.answer(f'Название: {i['name']}\nДата начала: {i['startedAt'][:10]} {i['startedAt'][11:-3]}\nДата окончания: {i['endedAt'][:10]} {i['endedAt'][11:-3]}\nПродолжительность: {i['duration']} минут')
+            else:
+                await message.answer('В этот период нет ВКС')
         except:
             await message.answer('Вы ввели некорректную дату')
 
@@ -192,57 +185,62 @@ async def myVCSInfo(message: Message):
 @dp.message(Command('create'))
 async def CreateVcs(message: Message):
     users = pd.read_csv('log.csv')
-    users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 1
-    await message.answer('Чтобы создать новую ВКС, введите название ВКС')
+    if np.int64(message.from_user.id) in users['id'].values:
+        users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] = 1
+        users.to_csv('log.csv', index=False)
+        await message.answer('Чтобы создать новую ВКС, введите название ВКС')
 
 @dp.message(Command('cancel'))
 async def CanсelVcs(message: Message):
     users = pd.read_csv('log.csv')
-    users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 0
-    users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] = ''
+    users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] = 0
+
+    users.to_csv('log.csv', index=False)
     await message.answer('Cоздание ВКС отменено')
 
 @dp.message()
 async def CreateVcs1(message: Message):
     users = pd.read_csv('log.csv')
     if np.int64(message.from_user.id) in users['id'].values:
-        if users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] == 1:
-            users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 2
+        if users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] == 1:
+            users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] = 2
             response = message.text
             users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] = response
             users.to_csv('log.csv', index=False)
             await message.answer('Введите время начала конференции (гггг-мм-дд чч:мм)')
 
-        elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] == 2:
-            users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 3
+        elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] == 2:
+            users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] = 3
 
             response = message.text
             tmp = response.split()[1]
             response = response.replace(' ', f'T{tmp}:00.000000')[:-5]
 
-            users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] = users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] + ';' + str(response)
+            users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] = users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] + '$' + str(response)
             users.to_csv('log.csv', index=False)
             await message.answer('Введите максимальное кол-во участников конференции')
 
-        elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] == 3:
-            users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 4
+        elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] == 3:
+            users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] = 4
 
             response = message.text
-            users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] += ';' + response
+            users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] += '$' + response
             users.to_csv('log.csv', index=False)
             await message.answer('Введите продoлжительность конференции в минутах')
 
-        elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] == 4:
-            users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 5
+        elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] == 4:
+            users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] = 5
             response = message.text
-            users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] += ';' + response
+            users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] += '$' + response
             users.to_csv('log.csv', index=False)
             await message.answer('''Отправтье любое сообщение для подтверждения создания ВКС''')
 
-        elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] == 5:
-            users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 0
-            zxc = users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'].split(';')
-
+        elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] == 5:
+            users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] = 0
+            zxc = users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'].split('$')
+            # users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] = ''
+            users.to_csv('log.csv', index=False)
+            print(zxc)
             if len(zxc) >= 4:
                 try:
                     zxc[2] = int(zxc[2])
@@ -253,8 +251,6 @@ async def CreateVcs1(message: Message):
             else:
                 await message.answer('Недостаточно данных для создания события.')
                 return
-
-            # print("New data array (zxc):", zxc)
 
             jsonlogin = {
                 "login": str(users.loc[users['id'].values.tolist().index(message.from_user.id), 'login']),
@@ -267,23 +263,39 @@ async def CreateVcs1(message: Message):
                 response.raise_for_status()
                 token = response.json().get('token')
                 if not token:
-                    # print("Token not found in response")
                     return
             except requests.exceptions.RequestException as e:
-                # print(f"Error during login request: {e}")
+                print(e)
                 return
 
             headers = {
                 'Authorization': 'Bearer ' + str(token),
                 'Content-Type': 'application/json',
             }
+            print(zxc[1])
 
             started_at_str = zxc[1]
             started_at = datetime.strptime(started_at_str, "%Y-%m-%dT%H:%M:%S.%f")
             send_notifications_at = started_at - timedelta(hours=1)
-            send_notifications_at_str = send_notifications_at.strftime("%Y-%m-%dT%H:%M:%S")
+            started_at1 = started_at - timedelta(hours=5)
 
+            started_at1str = started_at1.strftime("%Y-%m-%dT%H:%M:%S")
+            send_notifications_at_str = send_notifications_at.strftime("%Y-%m-%dT%H:%M:%S")
             participants_count = int(zxc[2])
+
+            h = int(zxc[1][11:13]) - 5
+
+            if h < 0:
+                d = int(zxc[1][8:10])
+                d -= 1
+                d = str(d)
+                h = 24 + h
+                zxc[1] = zxc[1][:8] + d + zxc[1][10:11] + str(h) + zxc[1][13:]
+
+            if (h > 0 and h < 10):
+                h = '0' + str(h)
+            zxc[1] = zxc[1][:11] + str(h) + zxc[1][13:]
+            print(zxc[1])
 
             cre = {
                 "name": zxc[0],
@@ -303,8 +315,6 @@ async def CreateVcs1(message: Message):
                 }
             }
 
-            #print("Request data:", json.dumps(cre, indent=4))
-
             try:
                 v = requests.post(url_vcs, headers=headers, json=cre)
                 v.raise_for_status()
@@ -314,6 +324,9 @@ async def CreateVcs1(message: Message):
             except requests.exceptions.RequestException as e:
                 # await message.answer("Произошла ошибка при создании ВКС, попробуйте заново.")
                 pass
+
+        elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] == 2:
+            await message.answer('Введите дату начала')
     else:
         await message.answer('Пожалуйста авторизуйтесь /login логин пароль')
 

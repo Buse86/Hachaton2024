@@ -2,7 +2,7 @@ import asyncio
 from operator import index
 from pyexpat.errors import messages
 from datetime import datetime, timedelta
-
+from aiogram.types import ReplyKeyboardRemove, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 import requests
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
@@ -38,7 +38,7 @@ async def help(message: Message):
     if np.int64(message.from_user.id) not in users['id'].values:
         await message.answer('Для того чтобы пользоватся ботом, вам нужно авторизоватся \nВведите /login логин пароль')
     else:
-        await message.answer('/vcs - Просмотр всех вкс по заданным фильтрам\n/myvcs - Просмотр всех ВКС, в котором вы явдяетесь участником\n/create - Создание вкс')
+        await message.answer('/vcs - Просмотр всех вкс по заданным фильтрам\n/myvcs - Просмотр всех ВКС, в котором вы являетесь участником\n/create - Создание вкс')
 
 @dp.message(Command('unlogin'))
 async def unLogin(message: Message):
@@ -89,52 +89,6 @@ async def VCSInfo(message: Message):
         users.to_csv('log.csv', index=False)
         print(type(users.loc[users['id'].values.tolist().index(message.from_user.id), 'create']))
 
-        # try:
-        #     data = str(message.text)[5:].split()
-        #
-        #     jsonlogin = {
-        #         "login": str(users.loc[users['id'].values.tolist().index(message.from_user.id), 'login']),
-        #         "password": str(users.loc[users['id'].values.tolist().index(message.from_user.id), 'password']),
-        #         "fingerprint": {}
-        #     }
-        #
-        #     token = requests.post(url_login, headers=headers_login, json=jsonlogin).json()['token']
-        #
-        #     headers = {
-        #         'Authorization': 'Bearer ' + str(token),
-        #         'Content-Type': 'application/json',
-        #     }
-        #
-        #     vcs_ans = []
-        #     info_vcs = ['name', 'startedAt', 'endedAt', 'duration', 'organizedBy']
-        #     for i in ['started', 'ended', 'booked', 'cancelled']:
-        #         params_vcs = {
-        #             'fromDatetime': f'{data[0]}T00:00:00.000000',
-        #             'toDatetime': f'{data[1]}T23:59:00.000000',
-        #             'state': i
-        #         }
-        #         vcs = requests.get(url_vcs, headers=headers, params=params_vcs)
-        #         vcs_ans += vcs.json()['data']
-        #
-        #     nm = {
-        #         'name': 'Название:',
-        #         "startedAt": 'Начало: ',
-        #         'endedAt': 'Конец',
-        #         'duration': 'Продолжительность',
-        #         'organizedBy': 'Организованно'
-        #     }
-        #     if len(vcs_ans) > 0:
-        #         for i in vcs_ans:
-        #             try:
-        #                 org = requests.get('https://test.vcc.uriit.ru/api/catalogs/departments/' + i['organizedBy'], headers=headers, params={'department_id': i['organizedBy']}).json()['name']
-        #                 await message.answer(f'Название: {i['name']}\nДата начала: {i['startedAt'][:10]} {i['startedAt'][11:-3]}\nДата окончания: {i['endedAt'][:10]} {i['endedAt'][11:-3]}\nПродолжительность: {i['duration']} минут\nОрганизованно: {org}')
-        #             except:
-        #                 await message.answer(f'Название: {i['name']}\nДата начала: {i['startedAt'][:10]} {i['startedAt'][11:-3]}\nДата окончания: {i['endedAt'][:10]} {i['endedAt'][11:-3]}\nПродолжительность: {i['duration']} минут')
-        #     else:
-        #         await message.answer('В этот период нет ВКС')
-        #
-        # except:
-        #     await message.answer('Вы ввели некорректную дату')
 
 @dp.message(Command('myvcs'))
 async def myVCSInfo(message: Message):
@@ -142,49 +96,11 @@ async def myVCSInfo(message: Message):
 
     if np.int64(message.from_user.id) in users['id'].values:
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] = 10
+        users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] = 10
         users.to_csv('log.csv', index=False)
 
         await message.answer('Введите даты начала и окончания ВКС через пробел, в формате: ГГГГ-ММ-ДД')
-        # try:
-        #     data = str(message.text)[7:].split()
-        #     print(1)
-        #     jsonlogin = {
-        #         "login": str(users.loc[users['id'].values.tolist().index(message.from_user.id), 'login']),
-        #         "password": str(users.loc[users['id'].values.tolist().index(message.from_user.id), 'password']),
-        #         "fingerprint": {}
-        #     }
-        #
-        #     token = requests.post(url_login, headers=headers_login, json=jsonlogin).json()['token']
-        #
-        #     headers = {
-        #         'Authorization': 'Bearer ' + str(token),
-        #         'Content-Type': 'application/json',
-        #     }
-        #
-        #     vcs_ans = []
-        #     info_vcs = ['name', 'startedAt', 'endedAt', 'duration', 'organizedBy']
-        #     for i in ['started', 'ended', 'booked', 'cancelled']:
-        #         id1 = requests.post(url_login, headers=headers_login, json=jsonlogin).json()['user']['id']
-        #         params_vcs = {
-        #             'fromDatetime': f'{data[0]}T00:00:00.000000',
-        #             'toDatetime': f'{data[1]}T23:59:00.000000',
-        #             'state': i,
-        #             'userParticipant': int(id1)
-        #         }
-        #         vcs = requests.get(url_vcs, headers=headers, params=params_vcs)
-        #         vcs_ans += vcs.json()['data']
-        #
-        #     if len(vcs_ans) > 0:
-        #         for i in vcs_ans:
-        #             try:
-        #                 org = requests.get('https://test.vcc.uriit.ru/api/catalogs/departments/' + i['organizedBy'], headers=headers, params={'department_id': i['organizedBy']}).json()['name']
-        #                 await message.answer(f'Название: {i['name']}\nДата начала: {i['startedAt'][:10]} {i['startedAt'][11:-3]}\nДата окончания: {i['endedAt'][:10]} {i['endedAt'][11:-3]}\nПродолжительность: {i['duration']} минут\nОрганизованно: {org}')
-        #             except:
-        #                 await message.answer(f'Название: {i['name']}\nДата начала: {i['startedAt'][:10]} {i['startedAt'][11:-3]}\nДата окончания: {i['endedAt'][:10]} {i['endedAt'][11:-3]}\nПродолжительность: {i['duration']} минут')
-        #     else:
-        #         await message.answer('В этот период нет ВКС')
-        # except:
-        #     await message.answer('Вы ввели некорректную дату')
+
 
 
 @dp.message(Command('create'))
@@ -239,7 +155,7 @@ async def CreateVcs1(message: Message):
             response = message.text
             users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] += '$' + response
             users.to_csv('log.csv', index=False)
-            await message.answer('''Отправтье любое сообщение для подтверждения создания ВКС''')
+            await message.answer('''Отправтье любое сообщение для подтверждения создания ВКС\nДля отмены поиска /cancel''')
 
         elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] == 5:
             users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] = 0
@@ -338,49 +254,70 @@ async def CreateVcs1(message: Message):
         response = message.text
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'filter'] = '$' + str(response)
         users.to_csv('log.csv', index=False)
-        await message.answer('Выберите состояние нужной вам ВКС')
+        kb = [
+            [types.KeyboardButton(text="Начатые")],
+            [types.KeyboardButton(text="Забронированные")],
+            [types.KeyboardButton(text="Законченные")],
+            [types.KeyboardButton(text="Отмененные")],
+            [types.KeyboardButton(text="Пропустить")]
+        ]
+        keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+        # await message.answer("Приветствую!", reply_markup=keyboard)
+        await message.answer('Выберите состояние нужной вам ВКС', reply_markup=keyboard)
 
     elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] == 11:
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] = 12
         response = message.text
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'filter'] += '$' + response
         users.to_csv('log.csv', index=False)
-        await message.answer('Введите название ВКС')
-
-    elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] == 11:
-        users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] = 12
-        response = message.text
-        users.loc[users['id'].values.tolist().index(message.from_user.id), 'filter'] += '$' + response
-        users.to_csv('log.csv', index=False)
-        await message.answer('Введите название ВКС')
+        kb = [
+            [types.KeyboardButton(text="Пропустить")],
+        ]
+        keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+        await message.answer('Введите название ВКС', reply_markup=keyboard)
 
     elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] == 12:
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] = 13
         response = message.text
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'filter'] += '$' + response
         users.to_csv('log.csv', index=False)
-        await message.answer('Выберите порядок приоритета')
+        kb = [
+            [types.KeyboardButton(text="1")],
+            [types.KeyboardButton(text="2")],
+            [types.KeyboardButton(text="3")],
+            [types.KeyboardButton(text="Пропустить")]
+        ]
+        keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+        await message.answer('Выберите порядок приоритета', reply_markup=keyboard)
 
     elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] == 13:
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] = 14
         response = message.text
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'filter'] += '$' + response
         users.to_csv('log.csv', index=False)
-        await message.answer('Введите название департамента')
+        kb = [
+            [types.KeyboardButton(text="Пропустить")],
+        ]
+        keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+        await message.answer('Введите название департамента', reply_markup=keyboard)
 
     elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] == 14:
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] = 15
         response = message.text
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'filter'] += '$' + response
         users.to_csv('log.csv', index=False)
-        await message.answer('Введите имя организатора')
+        kb = [
+            [types.KeyboardButton(text="Пропустить")],
+        ]
+        keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+        await message.answer('Введите имя организатора', reply_markup=keyboard)
 
     elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] == 15:
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] = 16
         response = message.text
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'filter'] += '$' + response
         users.to_csv('log.csv', index=False)
-        await message.answer('Введите любое сообщение для создания ВКС')
+        await message.answer('Введите любое сообщение для поиска ВКС\nДля отмены поиска /cancel')
 
     elif users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] == 16:
         users.loc[users['id'].values.tolist().index(message.from_user.id), 'create'] = 0
@@ -415,7 +352,10 @@ async def CreateVcs1(message: Message):
             }
 
             vcs_ans = []
-
+            idUs = requests.post(url_login, headers=headers_login, json=jsonlogin).json()['user']['id']
+            if users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] == 10:
+                users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] = ''
+                params_vcs['userParticipant'] = int(idUs)
             if datavcs[2] != 'Пропустить':
                 params_vcs['filter'] = datavcs[2]
             if datavcs[3] != 'Пропустить':
@@ -426,14 +366,29 @@ async def CreateVcs1(message: Message):
                     if datavcs[4] == id['name']:
                         id_dep = id['id']
                         params_vcs['departmentId'] = id_dep
+            if datavcs[1] == 'Пропустить':
+                for i in statusvcs[datavcs[1]]:
+                    params_vcs['state'] = i
+                    vcs = requests.get(url_vcs, headers=headers, params=params_vcs).json()
 
-            for i in statusvcs[datavcs[1]]:
-                params_vcs['state'] = i
+                    if datavcs[5] != 'Пропустить':
+                        for p in vcs['data']:
+                            id1 = p['id']
+                            info_vcs = requests.get(url_vcs + f'/{id1}', headers=headers, params=params_vcs).json()['organizedBy']
+                            if info_vcs == datavcs[5]:
+                                vcs_ans += vcs['data']
+                                break
+                    else:
+                        vcs_ans += vcs['data']
+            else:
+                params_vcs['state'] = statusvcs[datavcs[1]]
                 vcs = requests.get(url_vcs, headers=headers, params=params_vcs).json()
+
                 if datavcs[5] != 'Пропустить':
                     for p in vcs['data']:
                         id1 = p['id']
-                        info_vcs = requests.get(url_vcs + f'/{id1}', headers=headers, params=params_vcs).json()['organizedBy']
+                        info_vcs = requests.get(url_vcs + f'/{id1}', headers=headers, params=params_vcs).json()[
+                            'organizedBy']
                         if info_vcs == datavcs[5]:
                             vcs_ans += vcs['data']
                             break

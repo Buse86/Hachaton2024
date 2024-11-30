@@ -30,18 +30,23 @@ dp = Dispatcher()
 
 headers_login = {'Content-Type': 'application/json'}
 
-
-# token = requests.post(url_login, headers=headers_login, json=json_login).json()['token']
-# @dp.message_handler(commands=['start'])
-# async def cmd_start(message: types.Message):
-
 @dp.message(Command('start'))
 async def StartLogin(message: Message):
     await message.answer('Привет! Для продолжения работы нужно авторизоваться')
     await message.answer('Для авторизации напишите /login логин пароль')
+    await message.answer('Для просмотра списка команд введите /help')
+
+@dp.message(Command('help'))
+async def StartLogin(message: Message):
+    if np.int64(message.from_user.id) not in users['id'].values:
+        await message.answer('Для того чтобы пользоватся ботом, вам нужно авторизоватся \nВведите /login логин пароль')
+    else:
+        await message.answer('/vcs - Просмотр всех вкс по заданным фильтрам\n/myvcs - Просмотр всех ВКС, в котором вы явдяетесь участником\n/create - Создание вкс')
+
 
 @dp.message(Command('login'))
 async def asd(message: Message):
+    users = pd.read_csv('log.csv')
     if np.int64(message.from_user.id) not in users['id'].values:
         log1 = message.text[6:].split()
 
@@ -61,7 +66,6 @@ async def asd(message: Message):
             if np.int64(message.from_user.id) not in users['id'].values:
                 users.loc[len(users.index)] = log
                 users.to_csv('log.csv', index=False)
-                print(users)
 
             await message.answer(f'Вы успешно авторизовались!')
 
@@ -73,6 +77,7 @@ async def asd(message: Message):
 
 @dp.message(Command('vcs'))
 async def VCSInfo(message: Message):
+    users = pd.read_csv('log.csv')
     if np.int64(message.from_user.id) in users['id'].values:
         # await message.answer('Введите даты начала и окончания ВКС через пробел, в формате: ГГГГ-ММ-ДД')
         try:
@@ -128,6 +133,8 @@ async def VCSInfo(message: Message):
 
 @dp.message(Command('myvcs'))
 async def myVCSInfo(message: Message):
+    users = pd.read_csv('log.csv')
+
     if np.int64(message.from_user.id) in users['id'].values:
         # await message.answer('Введите даты начала и окончания ВКС через пробел, в формате: ГГГГ-ММ-ДД')
         try:
@@ -156,7 +163,6 @@ async def myVCSInfo(message: Message):
             info_vcs = ['name', 'startedAt', 'endedAt', 'duration', 'organizedBy']
             for i in ['started', 'ended', 'booked', 'cancelled']:
                 id1 = requests.post(url_login, headers=headers_login, json=jsonlogin).json()['user']['id']
-                print(2)
                 params_vcs = {
                     'fromDatetime': f'{data[0]}T00:00:00.000000',
                     'toDatetime': f'{data[1]}T23:59:00.000000',
@@ -165,7 +171,6 @@ async def myVCSInfo(message: Message):
                 }
                 vcs = requests.get(url_vcs, headers=headers, params=params_vcs)
                 vcs_ans += vcs.json()['data']
-                # print(vcs.json()['data'])
             nm = {
                 'name': 'Название:',
                 "startedAt": 'Начало: ',
@@ -173,9 +178,7 @@ async def myVCSInfo(message: Message):
                 'duration': 'Продолжительность',
                 'organizedBy': 'Организованно'
             }
-            # print(vcs_ans)
             for i in vcs_ans:
-                print(3)
                 try:
                     org = requests.get('https://test.vcc.uriit.ru/api/catalogs/departments/' + i['organizedBy'], headers=headers, params={'department_id': i['organizedBy']}).json()['name']
                     await message.answer(f'Название: {i['name']}\nДата начала: {i['startedAt'][:10]} {i['startedAt'][11:-3]}\nДата окончания: {i['endedAt'][:10]} {i['endedAt'][11:-3]}\nПродолжительность: {i['duration']} минут\nОрганизованно: {org}')
@@ -186,31 +189,22 @@ async def myVCSInfo(message: Message):
             await message.answer('Вы ввели некорректную дату')
 
 
-@dp.message(Command('filter'))
-async def FilterVCS(message: Message):
-    await message.answer('Выберите, по каким значениям хотите сортировать ВКС:\n'
-                         'Забронированные - /zabron\n'
-                         'Начатые - /active\n'
-                         'Законченные - /zakonchen\n'
-                         'Отмененные - /otmen\n'
-                         'Наименование - /imya\n'
-                         'Приоритет - /prior\n'
-                         'Департамент - /departament\n'
-                         'Организатор - /organiz')
-
 @dp.message(Command('create'))
 async def CreateVcs(message: Message):
+    users = pd.read_csv('log.csv')
     users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 1
     await message.answer('Чтобы создать новую ВКС, введите название ВКС')
 
 @dp.message(Command('cancel'))
 async def CanсelVcs(message: Message):
+    users = pd.read_csv('log.csv')
     users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 0
     users.loc[users['id'].values.tolist().index(message.from_user.id), 'VCScreate'] = ''
     await message.answer('Cоздание ВКС отменено')
 
 @dp.message()
 async def CreateVcs1(message: Message):
+    users = pd.read_csv('log.csv')
     if np.int64(message.from_user.id) in users['id'].values:
         if users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] == 1:
             users.loc[users['id'].values.tolist().index(message.from_user.id), 'сreate'] = 2
